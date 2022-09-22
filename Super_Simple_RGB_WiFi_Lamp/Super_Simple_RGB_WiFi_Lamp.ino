@@ -18,27 +18,31 @@
 #include "lwip/inet.h"
 #include "lwip/dns.h"
 #include <map>
+#include "FastLED_RGBW.h"
 
 
 // ############################################################# Sketch Variables #############################################################
 // All variables at the top of this sketch need to be defined correctly for your light. Read the comments around each one for more details on 
 // what each of them are.
 
-#define DEFAULT_NAME "Super Simple RGB Wifi Lamp"
+#define DEFAULT_NAME "Lillys Lamp"
 
 // Set Your Data pin - This is the pin on your ESP8266 that is connected to the LED's. Remember to add the letter "D" infront of the number 
 // to map the pin correctly for your platform.
-#define DATA_PIN D1
+#define DATA_PIN D5
+
+// Pin used for the manual switch to turn LEDs on and off
+#define SWITCH_PIN D0
 
 // Set the number of LED's - Simply count how many there are on your string and enter the number here.
-#define NUM_LEDS 66
+#define NUM_LEDS 109
 
 // Set your UTC offset - This is the time zone you are in. for example +10 for Sydney or -4 for NYC.
-#define UTC_OFFSET +10
+#define UTC_OFFSET 0
 
 // Set the chipset and color order for the LEDs you are using. For more info on supported hardware see: https://github.com/FastLED/FastLED/wiki/Overview#supported-chipsets.
 #define CHIPSET WS2812B
-#define COLOR_ORDER GRB
+#define COLOR_ORDER RGB
 
 // Limit the maximum frame rate to prevent flickering. Values around 400 or
 // above cause flickering LEDs because of the WS2821 update frequency.
@@ -47,10 +51,10 @@
 // Set up LED's for each side - These arrays hold which leds are on what sides. For the basic rectangular shape in the example this relates to 4
 // sides and 4 arrays. You must subract 1 off the count of the LED when entering it as the array is 0 based. For example the first LED on the 
 // string is entered as 0.
-int topLeds[]     = {18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
-int bottomLeds[]  = {14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51};
-int leftLeds[]    = {48, 49, 50};
-int rightLeds[]   = {15, 16, 17};
+int topLeds[]     = {52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95};
+int bottomLeds[] =  {40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 108, 107};
+int leftLeds[]    = {96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106};
+int rightLeds[]   = {41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51};
 
 // Eneter your wifi credentials here - If you would like to enter your wifi credentials now you can with these variables. This is a nice easy 
 // method to get your ESP8266 connected to your network quickly. If you don't you can always set it up later in the wifi portal.
@@ -148,7 +152,8 @@ unsigned long currentEpochTime        = 0;
 unsigned long lastNTPCollectionTime   = 0;
 
 // LED string object and Variables
-CRGB ledString[NUM_LEDS];
+CRGBW ledString[NUM_LEDS];
+CRGB *ledsRGB = (CRGB *) &ledString[0];
 bool autoOnWithModeChange = true;
 int topNumLeds      = sizeof(topLeds) / sizeof(*topLeds);
 int bottomNumLeds   = sizeof(bottomLeds) / sizeof(*bottomLeds);
@@ -166,6 +171,62 @@ bool    previousState         = false;                                // Placeho
 float   modeChangeFadeAmount  = 0;                                    // Place holder for global brightness during mode change
 String  SketchName            = __FILE__;                             // Name of the sketch file (used for info page)
 
+//switch debounce variables
+int buttonState;                                                       // the current state from the input pin
+int lastButtonState = HIGH;                                            // the previous reading from the input pin
+unsigned long lastDebounceTime = 0;                                    // the last time the output pin was toggled
+unsigned long debounceDelay = 50;                                      // the debounce time; increase if the output flickers
+unsigned long lastTransistionTime = 0;                                 // last time the state changed
+unsigned long stateTransistionDelay = 1500;                            // if the button is held down then leave a second between turning on and off
+
+void intCallback(){
+  // read the state of the switch into a local variable:
+  int reading = digitalRead(SWITCH_PIN);
+
+  // If the switch changed, due to noise or pressing:
+  if (reading != lastButtonState) {
+    // reset the debouncing timer
+    lastDebounceTime = millis();
+  }
+lastButtonState = reading;  
+}
+
+void checkSwitchState(){
+  // read the state of the switch into a local variable:
+  int reading = digitalRead(SWITCH_PIN);
+
+  // If the switch changed, due to noise or pressing:
+  if (reading != lastButtonState) {
+    // reset the debouncing timer
+    lastDebounceTime = millis();
+  }
+  lastButtonState = reading;  
+  //if (lastButtonState == LOW){
+  //  Serial.println("[checkSwitchState] - button low"); 
+  //}else if (lastButtonState == HIGH){
+  //  Serial.println("[checkSwitchState] - button high");    
+  //}
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    // whatever the reading is at, it's been there for longer than the debounce
+    // delay, so take it as the actual current state:
+
+    // if the button state has changed:
+    if (lastButtonState != buttonState) {
+      buttonState = lastButtonState;
+
+      // toggle the state of the light when the button has been pressed
+      if (buttonState == LOW) {
+        if ((millis() - lastTransistionTime) > stateTransistionDelay){      
+          State ^= true;
+          lastTransistionTime = millis();
+          Serial.println("[checkSwitchState] - Lamp State Changed");
+        }
+      }
+    }
+  }
+}
+
 // Setup Method - Runs only once before the main loop. Useful for setting things up
 void setup() {
   // Add a short delay on start
@@ -178,6 +239,12 @@ void setup() {
   // Check if the flash has been set up correctly
   spiffsCorrectSize = checkFlashConfig();
   if (spiffsCorrectSize) {
+
+    // Setup weak internal pullups
+    pinMode(SWITCH_PIN, INPUT_PULLUP);   
+    // Init interrupts to allow for switching the light on and off with the button
+    //attachInterrupt(digitalPinToInterrupt(SWITCH_PIN), intCallback, FALLING); 
+       
     // Init the LED's
     ledStringInit();
     ledModeInit();
@@ -222,8 +289,14 @@ void loop() {
     // Handle the wifi connection 
     handleWifiConnection();
 
+    //Check to see if switch has been pressed to turn light on/off
+    //checkSwitchState();     
+
     // Update the LED's
-    handleMode();
+    handleMode();    
+
+    // Reset the sw watchdog timer
+    ESP.wdtFeed();    
   }
   else {
     delay(10000);

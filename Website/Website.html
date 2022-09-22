@@ -12,7 +12,7 @@
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tinyColorPicker/1.1.1/jqColorPicker.min.js"></script>
 
-    <title>RGB WiFi Lamp</title>
+    <title>Lilly's Lamp</title>
     <script>
         var websock;
         var reconnectTimer;
@@ -558,7 +558,7 @@
 <body class="bg-dark text-light text-justify" onload="javascript:onStart();">
     <nav class="navbar navbar-expand-sm bg-secondary navbar-dark fixed-top" id="navbarHeader">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#" id="HomeButton">RGB WiFi Lamp</a>
+            <a class="navbar-brand" href="#" id="HomeButton">Lilly's Lamp</a>
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -720,7 +720,7 @@
         </div>
         <div id="Home" class="container tab-pane active">
             <h1>Home</h1>
-            <p>Welcome to your RGB WiFi Lamp web page! Here you can change the mode to one of the pre programmed ones
+            <p>Hi Lilly welcome to your Lamp web page! Here you can change the mode to one of the pre programmed ones
                 below. Click any of the buttons to interact with the light.</p>
             <button id="colourButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Colour</button>
             <button id="rainbowButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Rainbow</button>
@@ -729,7 +729,7 @@
             <button id="circleButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Circle</button>
             <button id="nightRiderButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Night Rider</button>
             <button id="sparkleButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Sparkle</button>
-            <button id="colorWipeButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Color Wipe</button>
+            <button id="colorWipeButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Colour Wipe</button>
             <button id="saturationFadeButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Saturation Fade</button>
             <button id="confettiButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Confetti</button>
             <button id="firefliesButton" type="submit" class="col mb-2 mx-2 btn btn-lg btn-outline-light">Fireflies</button>
@@ -819,11 +819,20 @@
                 <button id="3000Button" class="col mb-2 mx-2 btn btn-lg btn-outline-light">3000K</button>
                 <button id="4000Button" class="col mb-2 mx-2 btn btn-lg btn-outline-light">4000K</button>
             </div>
+			<div class="row my-3">
+				<button id="whiteButton" class="col mb-2 mx-2 btn btn-lg btn-outline-light">White</button>
+			</div>
+			<div class="row my-3">
+				<label for="colourBrightness">Colour Brightness: <span id="colourBrightnessLabel">100</span>%</label>
+				<input id="colourBrightness" type="range" min="0" max="100" step="1" value="100" class="form-control-range custom-range">
+			</div>
             <script>
                 var currentRed = 0;
                 var currentGreen = 0;
                 var currentBlue = 0;
-                var colourDebunce = Date.now()
+				var currentWhite = 0;
+                var colourDebunce = Date.now();
+				var colourLastMessage = "";
 
                 var colourSelectButton = $('#colourSelectButton').colorPicker({
                     customBG: '#222',
@@ -847,43 +856,50 @@
 
                     renderCallback: function ($elm, toggled) {
                         var colors = this.color.colors;
-                        onColourButtonEvent(Math.round(colors.rgb.r * 255), Math.round(colors.rgb.g * 255), Math.round(colors.rgb.b * 255))
+                        onColourButtonEvent(Math.round(colors.rgb.r * 255), Math.round(colors.rgb.g * 255), Math.round(colors.rgb.b * 255), 0)
                         setPickerColor(colourSelectButton, Math.round(colors.rgb.r * 255), Math.round(colors.rgb.g * 255), Math.round(colors.rgb.b * 255))
                     }
                 })
                 $("#redButton").click(function () {
-                    onColourButtonEvent(255, 0, 0)
+                    onColourButtonEvent(255, 0, 0, 0)
                 });
                 $("#greenButton").click(function () {
-                    onColourButtonEvent(0, 255, 0)
+                    onColourButtonEvent(0, 255, 0, 0)
                 });
                 $("#blueButton").click(function () {
-                    onColourButtonEvent(0, 0, 255)
+                    onColourButtonEvent(0, 0, 255, 0)
                 });
                 $("#yellowButton").click(function () {
-                    onColourButtonEvent(255, 255, 0)
+                    onColourButtonEvent(255, 255, 0, 0)
                 });
                 $("#cyanButton").click(function () {
-                    onColourButtonEvent(0, 255, 255)
+                    onColourButtonEvent(0, 255, 255, 0)
                 });
                 $("#magentaButton").click(function () {
-                    onColourButtonEvent(255, 0, 255)
+                    onColourButtonEvent(255, 0, 255, 0)
                 });
                 $("#2500Button").click(function () {
-                    onColourButtonEvent(206, 57, 18)
+                    onColourButtonEvent(206, 57, 18, 0)
                 });
                 $("#3000Button").click(function () {
-                    onColourButtonEvent(235, 71, 30)
+                    onColourButtonEvent(235, 71, 30, 0)
                 });
                 $("#4000Button").click(function () {
-                    onColourButtonEvent(238, 99, 63)
+                    onColourButtonEvent(238, 99, 63, 0)
                 });
+				$("#whiteButton").click(function () {
+                    onColourButtonEvent(0, 0, 0, 255)
+                });
+				$("#colourBrightness").on("input", function () {
+                    onColourBrightnessEvent()
+				});
 
-                function onColourButtonEvent(red, green, blue) {
-                    if (currentRed != red || currentGreen != green || currentBlue != blue) {
+                function onColourButtonEvent(red, green, blue, white) {
+                    if (currentRed != red || currentGreen != green || currentBlue != blue || currentWhite != white) {
                         currentRed = red
                         currentGreen = green
                         currentBlue = blue
+						currentWhite = white
 
                         msg = {
                             "State": true,
@@ -891,13 +907,34 @@
                             "Colour": {
                                 "Red": red,
                                 "Green": green,
-                                "Blue": blue
+                                "Blue": blue,
+								"White": white
                             }
                         }
                         if (Date.now() - colourDebunce > 50) {
                             colourDebunce = Date.now()
                             sendMessage(msg)
                         }
+                    }
+                }
+				
+				function onColourBrightnessEvent() {
+                    let currentSpeedValue = parseFloat($("#colourBrightness").val())
+
+                    $("#colourBrightnessLabel").html(currentSpeedValue)
+
+                    msg = {
+                        "State": true,
+                        "Mode": "Colour",
+                        "Colour": {
+                            "Brightness": currentSpeedValue
+                        }
+                    }
+
+                    if (msg != colourLastMessage && Date.now() - colourDebunce > 50) {
+                        colourDebunce = Date.now()
+                        colourLastMessage = msg
+                        sendMessage(msg)
                     }
                 }
             </Script>

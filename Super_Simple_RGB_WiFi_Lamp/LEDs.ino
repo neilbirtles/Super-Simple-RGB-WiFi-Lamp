@@ -1,6 +1,8 @@
 void ledStringInit() {
   // add the leds to fast led and clear them
-  FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(ledString, NUM_LEDS);
+  //FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(ledString, NUM_LEDS);
+  //FastLED with RGBW
+  FastLED.addLeds<CHIPSET, DATA_PIN, COLOR_ORDER>(ledsRGB, getRGBWsize(NUM_LEDS));
   FastLED.clear ();
   FastLED.show();
 
@@ -124,5 +126,5 @@ void adjustBrightnessAndSwitchMode() {
   }
 
   // Globally Scale the brightness of all LED's
-  nscale8(ledString, NUM_LEDS, (int)modeChangeFadeAmount);
+  nscale8(ledsRGB, NUM_LEDS, (int)modeChangeFadeAmount);
 }
