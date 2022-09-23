@@ -126,5 +126,5 @@ void adjustBrightnessAndSwitchMode() {
   }
 
   // Globally Scale the brightness of all LED's
-  nscale8(ledsRGB, NUM_LEDS, (int)modeChangeFadeAmount);
+  nscale8(ledString, NUM_LEDS, (int)modeChangeFadeAmount);
 }
